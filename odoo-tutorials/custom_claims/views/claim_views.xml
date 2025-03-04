@@ -1,0 +1,50 @@
+<odoo>
+    <record id="view_claim_form" model="ir.ui.view">
+        <field name="name">custom.claim.form</field>
+        <field name="model">custom.claim</field>
+        <field name="arch" type="xml">
+            <form string="Reclamació de Client">
+                <sheet>
+                    <group>
+                        <field name="subject"/>
+                        <field name="description"/>
+                        <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,cancelled"/>
+                        <field name="sale_order_id"/>
+                        <field name="partner_id"/>
+                        <field name="user_id"/>
+                        <field name="create_date" readonly="1"/>
+                        <field name="write_date" readonly="1"/>
+                        <field name="close_date" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Missatges">
+                            <field name="message_ids">
+                                <tree>
+                                    <field name="date"/>
+                                    <field name="author_id"/>
+                                    <field name="content"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Resolució">
+                            <field name="resolution"/>
+                            <field name="closing_reason_id"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_set_in_progress" type="object" string="En Tractament" states="new"/>
+                    <button name="action_close" type="object" string="Tancar" states="in_progress"/>
+                    <button name="action_cancel" type="object" string="Cancel·lar" states="new,in_progress"/>
+                    <button name="action_reopen" type="object" string="Reobrir" states="closed,cancelled"/>
+                    <button name="action_cancel_sale_order" type="object" string="Cancel·lar Comanda" states="new,in_progress"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_claim_tree" model="ir.ui.view">
+        <field name="
+::contentReference[oaicite:0]{index=0}
+ 
+

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Menú principal dins de l'aplicació de vendes -->
+    <menuitem id="menu_custom_claim_root" 
+              name="Reclamacions" 
+              parent="sale.sale_menu_root" 
+              sequence="10"/>
+
+    <!-- Submenú per a la gestió de reclamacions -->
+    <menuitem id="menu_custom_claim" 
+              name="Gestió de Reclamacions" 
+              parent="menu_custom_claim_root" 
+              action="action_custom_claim" 
+              sequence="20"/>
+
+    <!-- Vista de les reclamacions -->
+    <record id="action_custom_claim" model="ir.actions.act_window">
+        <field name="name">Reclamacions</field>
+        <field name="res_model">custom.claim</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>
+                Aquí pots gestionar les reclamacions dels clients. 
+                Fes clic a "Crear" per afegir una nova reclamació.
+            </p>
+        </field>
+    </record>
+</odoo>
+
