@@ -1,29 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Menú principal dins de l'aplicació de vendes -->
-    <menuitem id="menu_custom_claim_root" 
-              name="Reclamacions" 
-              parent="sale.sale_menu_root" 
-              sequence="10"/>
+    <menuitem id="menu_claims_root" name="Reclamacions"/>
+    <menuitem id="menu_claims" name="Totes les Reclamacions" parent="menu_claims_root" action="action_claims"/>
+    
+    <!-- Menú de configuració -->
+    <menuitem id="menu_configuration" name="Configuració" parent="menu_claims_root" sequence="100"/>
+    <menuitem id="menu_closure_reasons" name="Motius de Tancament" parent="menu_configuration" action="action_closure_reasons"/>
 
-    <!-- Submenú per a la gestió de reclamacions -->
-    <menuitem id="menu_custom_claim" 
-              name="Gestió de Reclamacions" 
-              parent="menu_custom_claim_root" 
-              action="action_custom_claim" 
-              sequence="20"/>
-
-    <!-- Vista de les reclamacions -->
-    <record id="action_custom_claim" model="ir.actions.act_window">
-        <field name="name">Reclamacions</field>
-        <field name="res_model">custom.claim</field>
+    <!-- Acció per motius de tancament -->
+    <record id="action_closure_reasons" model="ir.actions.act_window">
+        <field name="name">Motius de Tancament</field>
+        <field name="res_model">custom.closure.reason</field>
         <field name="view_mode">tree,form</field>
-        <field name="help" type="html">
-            <p>
-                Aquí pots gestionar les reclamacions dels clients. 
-                Fes clic a "Crear" per afegir una nova reclamació.
-            </p>
-        </field>
     </record>
 </odoo>
-

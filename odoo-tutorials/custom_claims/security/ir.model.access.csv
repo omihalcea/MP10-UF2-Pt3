@@ -1,3 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_custom_claim_user,access_custom_claim_user,model_custom_claim,base.group_user,1,1,1,1
-access_custom_claim_manager,access_custom_claim_manager,model_custom_claim,base.group_system,1,1,1,1
+access_custom_claim_user,custom.claim.user,model_custom_claim,base.group_user,1,1,1,0
+access_custom_claim_manager,custom.claim.manager,model_custom_claim,base.group_system,1,1,1,1
+access_custom_claim_message_user,custom.claim.message.user,model_custom_claim_message,base.group_user,1,0,1,0
+access_custom_closure_reason_manager,custom.closure.reason.manager,model_custom_closure_reason,base.group_system,1,1,1,1

@@ -1,95 +1,204 @@
-from odoo import models, fields, api
-from odoo.exceptions import ValidationError
+# -*- coding: utf-8 -*-
+
+from odoo import models, fields, api, exceptions, _
+from datetime import datetime
 
 class Claim(models.Model):
     _name = 'custom.claim'
-    _description = 'Reclamació de Client'
+    _description = 'Reclamació de client'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'create_date desc'
-    _rec_name = 'subject'
 
-    subject = fields.Char(string='Assumpte', required=True, tracking=True)
-    description = fields.Text(string='Descripció Inicial', required=True)
-    state = fields.Selection([
-        ('new', 'Nova'),
-        ('in_progress', 'En Tractament'),
-        ('closed', 'Tancada'),
-        ('cancelled', 'Cancel·lada')
-    ], string='Estat', default='new', tracking=True)
-    sale_order_id = fields.Many2one('sale.order', string='Comanda de Venda', required=True)
-    partner_id = fields.Many2one('res.partner', string='Client', required=True)
-    user_id = fields.Many2one('res.users', string='Usuari', default=lambda self: self.env.user)
-    create_date = fields.Datetime(string='Data de Creació', default=fields.Datetime.now, readonly=True)
-    write_date = fields.Datetime(string='Data de Modificació', readonly=True)
-    close_date = fields.Datetime(string='Data de Tancament', readonly=True)
-    message_ids = fields.One2many('custom.claim.message', 'claim_id', string='Missatges')
-    invoice_count = fields.Integer(string='Nombre de Factures', compute='_compute_invoice_count')
-    delivery_count = fields.Integer(string='Nombre d’Enviaments', compute='_compute_delivery_count')
-    resolution = fields.Text(string='Descripció de la Resolució Final')
-    closing_reason_id = fields.Many2one('custom.claim.closing.reason', string='Motiu de Tancament/Cancel·lació')
-
-    _sql_constraints = [
-        ('unique_open_claim_per_order', 'UNIQUE(sale_order_id, state)', 'Només pot haver-hi una reclamació oberta per comanda.')
-    ]
+    name = fields.Char(
+        string='Referència',
+        readonly=True,
+        default=lambda self: _('Nova'),
+        copy=False
+    )
+    subject = fields.Char(
+        string='Assumpte',
+        required=True,
+        tracking=True
+    )
+    description = fields.Text(
+        string='Descripció inicial',
+        required=True
+    )
+    state = fields.Selection(
+        selection=[
+            ('new', 'Nova'),
+            ('in_progress', 'En tractament'),
+            ('closed', 'Tancada'),
+            ('canceled', 'Cancel·lada')],
+        string='Estat',
+        default='new',
+        tracking=True
+    )
+    sale_order_id = fields.Many2one(
+        comodel_name='sale.order',
+        string='Comanda associada',
+        required=True,
+        domain="[('state','not in', ('cancel', 'done'))]",
+        ondelete='restrict'
+    )
+    partner_id = fields.Many2one(
+        comodel_name='res.partner',
+        string='Client',
+        related='sale_order_id.partner_id', 
+        store=True,
+        readonly=True
+    )
+    user_id = fields.Many2one(
+        comodel_name='res.users',
+        string='Responsable',
+        default=lambda self: self.env.user,
+        tracking=True
+    )
+    create_date = fields.Datetime(
+        string='Data creació',
+        readonly=True
+    )
+    write_date = fields.Datetime(
+        string='Data modificació',
+        readonly=True
+    )
+    close_date = fields.Datetime(
+        string='Data tancament',
+        readonly=True
+    )
+    message_ids = fields.One2many(
+        comodel_name='custom.claim.message',
+        inverse_name='claim_id',
+        string='Missatges',
+        copy=False
+    )
+    invoice_count = fields.Integer(
+        string='Factures',
+        compute='_compute_invoice_shipment'
+    )
+    shipment_count = fields.Integer(
+        string='Enviaments',
+        compute='_compute_invoice_shipment'
+    )
+    resolution = fields.Text(
+        string='Resolució final',
+        tracking=True
+    )
+    closure_reason_id = fields.Many2one(
+        comodel_name='custom.closure.reason',
+        string='Motiu tancament',
+        tracking=True
+    )
 
     @api.depends('sale_order_id')
-    def _compute_invoice_count(self):
+    def _compute_invoice_shipment(self):
         for record in self:
-            record.invoice_count = len(record.sale_order_id.invoice_ids)
+            record.invoice_count = len(record.sale_order_id.invoice_ids.filtered(lambda i: i.state != 'cancel'))
+            record.shipment_count = len(record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'cancel'))
 
-    @api.depends('sale_order_id')
-    def _compute_delivery_count(self):
-        for record in self:
-            record.delivery_count = len(record.sale_order_id.picking_ids)
-
-    def action_set_in_progress(self):
-        self.ensure_one()
-        if self.state == 'new':
-            self.state = 'in_progress'
+    @api.model
+    def create(self, vals):
+        if vals.get('name', _('Nova')) == _('Nova'):
+            vals['name'] = self.env['ir.sequence'].next_by_code('custom.claim') or _('Nova')
+        return super().create(vals)
 
     def action_close(self):
         self.ensure_one()
-        if self.state in ['new', 'in_progress']:
-            if not self.resolution:
-                raise ValidationError('Cal proporcionar una resolució abans de tancar la reclamació.')
-            self.state = 'closed'
-            self.close_date = fields.Datetime.now()
+        if self.state not in ['new', 'in_progress']:
+            raise exceptions.UserError(_('Acció no permesa en estat actual'))
+        self.write({
+            'state': 'closed',
+            'close_date': datetime.now(),
+            'closure_reason_id': self.closure_reason_id.id or False
+        })
 
     def action_cancel(self):
         self.ensure_one()
-        if self.state in ['new', 'in_progress']:
-            self.state = 'cancelled'
-            self.close_date = fields.Datetime.now()
+        if self.state == 'canceled':
+            return
+        self.write({'state': 'canceled'})
 
     def action_reopen(self):
         self.ensure_one()
-        if self.state in ['closed', 'cancelled']:
-            self.state = 'in_progress'
-            self.close_date = False
+        allowed_states = ['closed', 'canceled']
+        if self.state not in allowed_states:
+            raise exceptions.UserError(_('Només es poden reobrir reclamacions tancades o cancel·lades'))
+        self.write({'state': 'in_progress'})
 
-    def action_cancel_sale_order(self):
+    def action_cancel_order(self):
         self.ensure_one()
-        sale_order = self.sale_order_id
-        if sale_order.state == 'cancel':
-            raise ValidationError('La comanda ja està cancel·lada.')
-        if any(invoice.state == 'posted' for invoice in sale_order.invoice_ids):
-            raise ValidationError('No es pot cancel·lar la comanda perquè té factures publicades.')
-        sale_order.action_cancel()
-        template = self.env.ref('custom_claims.email_template_sale_order_cancelled')
-        self.env['mail.template'].browse(template.id).send_mail(self.id, force_send=True)
+        if self.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted'):
+            raise exceptions.UserError(
+                _('Operació bloquejada: Existeixen factures validades'))
+        
+        # Notificació al client
+        template = self.env.ref('custom_claims.mail_template_order_cancellation', raise_if_not_found=False)
+        if template:
+            self.sale_order_id.message_post_with_template(template.id)
+        
+        # Cancel·lar operacions relacionades
+        self.sale_order_id._action_cancel()
+        self.sale_order_id.picking_ids.filtered(
+            lambda p: p.state not in ('done', 'cancel')
+        ).action_cancel()
+        
+        self.sale_order_id.invoice_ids.filtered(
+            lambda i: i.state == 'draft'
+        ).button_cancel()
+
+    @api.constrains('sale_order_id', 'state')
+    def _check_open_claims(self):
+        for record in self:
+            if record.state in ['new', 'in_progress']:
+                existing = self.search_count([
+                    ('sale_order_id', '=', record.sale_order_id.id),
+                    ('state', 'in', ('new', 'in_progress')),
+                    ('id', '!=', record.id)
+                ])
+                if existing:
+                    raise exceptions.ValidationError(
+                        _('Error de duplicitat: Ja existeix una reclamació activa per la comanda %s') % record.sale_order_id.name)
 
 class ClaimMessage(models.Model):
     _name = 'custom.claim.message'
-    _description = 'Missatge de Reclamació'
+    _description = 'Missatge de reclamació'
+    _order = 'create_date desc'
+    _rec_name = 'create_date'
 
-    claim_id = fields.Many2one('custom.claim', string='Reclamació', required=True, ondelete='cascade')
-    author_id = fields.Many2one('res.partner', string='Autor', required=True)
-    date = fields.Datetime(string='Data', default=fields.Datetime.now, readonly=True)
-    content = fields.Text(string='Contingut', required=True)
+    claim_id = fields.Many2one(
+        comodel_name='custom.claim',
+        string='Reclamació',
+        required=True,
+        ondelete='cascade'
+    )
+    content = fields.Text(
+        string='Contingut',
+        required=True
+    )
+    author_id = fields.Many2one(
+        comodel_name='res.users',
+        string='Autor',
+        default=lambda self: self.env.user,
+        readonly=True
+    )
+    create_date = fields.Datetime(
+        string='Data',
+        default=fields.Datetime.now,
+        readonly=True
+    )
 
-class ClaimClosingReason(models.Model):
-    _name = 'custom.claim.closing.reason'
-    _description = 'Motiu de Tancament/Cancel·lació'
+    def write(self, vals):
+        raise exceptions.UserError(_('Els missatges són immutables'))
+    
+    def unlink(self):
+        raise exceptions.UserError(_('Els missatges no es poden eliminar'))
 
-    name = fields.Char(string='Motiu', required=True)
-
+class SaleOrder(models.Model):
+    _inherit = 'sale.order'
+    
+    claim_ids = fields.One2many(
+        comodel_name='custom.claim',
+        inverse_name='sale_order_id',
+        string='Reclamacions',
+        copy=False
+    )

@@ -1,2 +1,2 @@
-# models/__init__.py
 from . import claim
+from . import closure_reason

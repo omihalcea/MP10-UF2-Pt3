@@ -1,17 +1,18 @@
 {
     'name': 'Gestió de Reclamacions',
     'version': '1.0',
-    'summary': 'Mòdul per gestionar les reclamacions dels clients',
-    'description': 'Permet gestionar les reclamacions dels clients, incloent estat, missatges i accions relacionades.',
-    'author': 'El teu nom',
-    'depends': ['base', 'sale', 'mail'],
+    'summary': 'Gestió de reclamacions de clients',
+    'category': 'Customer Relationship Management',
+    'depends': ['sale', 'stock', 'account'],
     'data': [
-        'security/security.xml',
         'security/ir.model.access.csv',
+        'security/security.xml',
+        'data/closure_reason_data.xml',
         'views/claim_views.xml',
+        'views/sale_views.xml',
         'views/claim_menus.xml',
     ],
     'installable': True,
     'application': True,
+    'license': 'LGPL-3',
 }
-

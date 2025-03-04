@@ -1,50 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Llista de reclamacions -->
+    <record id="view_claim_list" model="ir.ui.view">
+        <field name="name">custom.claim.list</field>
+        <field name="model">custom.claim</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" string="Referència"/>
+                <field name="subject" string="Assumpte"/>
+                <field name="state" string="Estat"/>
+                <field name="sale_order_id" string="Comanda"/>
+                <field name="partner_id" string="Client"/>
+                <field name="user_id" string="Responsable"/>
+                <field name="create_date" string="Data creació"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista formulari -->
     <record id="view_claim_form" model="ir.ui.view">
         <field name="name">custom.claim.form</field>
         <field name="model">custom.claim</field>
         <field name="arch" type="xml">
-            <form string="Reclamació de Client">
+            <form>
+                <header>
+                    <button name="action_close" string="Tancar" class="oe_highlight" 
+                            invisible="state not in ['new','in_progress']"/>
+                    <button name="action_cancel" string="Cancel·lar" 
+                            invisible="state not in ['new','in_progress']"/>
+                    <button name="action_reopen" string="Reobrir" 
+                            invisible="state not in ['closed','canceled']"/>
+                    <button name="action_cancel_order" string="Cancel·lar Comanda" class="oe_highlight" 
+                            invisible="state not in ['new','in_progress']"/>
+                    <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,canceled"/>
+                </header>
                 <sheet>
                     <group>
-                        <field name="subject"/>
-                        <field name="description"/>
-                        <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,cancelled"/>
-                        <field name="sale_order_id"/>
-                        <field name="partner_id"/>
-                        <field name="user_id"/>
-                        <field name="create_date" readonly="1"/>
-                        <field name="write_date" readonly="1"/>
-                        <field name="close_date" readonly="1"/>
+                        <group>
+                            <field name="name"/>
+                            <field name="sale_order_id"/>
+                            <field name="partner_id"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="create_date"/>
+                            <field name="write_date"/>
+                            <field name="close_date"/>
+                        </group>
                     </group>
                     <notebook>
+                        <page string="Detalls">
+                            <field name="subject"/>
+                            <field name="description"/>
+                            <field name="resolution"/>
+                            <field name="closure_reason_id"/>
+                        </page>
                         <page string="Missatges">
                             <field name="message_ids">
                                 <tree>
-                                    <field name="date"/>
+                                    <field name="create_date"/>
                                     <field name="author_id"/>
                                     <field name="content"/>
                                 </tree>
                             </field>
                         </page>
-                        <page string="Resolució">
-                            <field name="resolution"/>
-                            <field name="closing_reason_id"/>
+                        <page string="Relacionats">
+                            <group>
+                                <field name="invoice_count" widget="statinfo" string="Factures"/>
+                                <field name="shipment_count" widget="statinfo" string="Enviaments"/>
+                            </group>
                         </page>
                     </notebook>
                 </sheet>
-                <footer>
-                    <button name="action_set_in_progress" type="object" string="En Tractament" states="new"/>
-                    <button name="action_close" type="object" string="Tancar" states="in_progress"/>
-                    <button name="action_cancel" type="object" string="Cancel·lar" states="new,in_progress"/>
-                    <button name="action_reopen" type="object" string="Reobrir" states="closed,cancelled"/>
-                    <button name="action_cancel_sale_order" type="object" string="Cancel·lar Comanda" states="new,in_progress"/>
-                </footer>
             </form>
         </field>
     </record>
 
-    <record id="view_claim_tree" model="ir.ui.view">
-        <field name="
-::contentReference[oaicite:0]{index=0}
- 
+    <!-- Acció i menú -->
+    <record id="action_claims" model="ir.actions.act_window">
+        <field name="name">Reclamacions</field>
+        <field name="res_model">custom.claim</field>
+        <field name="view_mode">list,form</field>
+    </record>
 
+    <!-- Integració amb comandes de venda -->
+    <record id="view_sale_order_form_inherit" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.claims</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='other_information']" position="after">
+                <page string="Reclamacions">
+                    <field name="claim_ids">
+                        <tree>
+                            <field name="name"/>
+                            <field name="subject"/>
+                            <field name="state"/>
+                            <field name="user_id"/>
+                            <field name="create_date"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
