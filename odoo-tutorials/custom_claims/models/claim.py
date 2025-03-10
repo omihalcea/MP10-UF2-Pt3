@@ -90,17 +90,22 @@ class Claim(models.Model):
         tracking=True
     )
 
-    @api.depends('sale_order_id')
+    @api.depends('sale_order_id.invoice_ids', 'sale_order_id.picking_ids')
     def _compute_invoice_shipment(self):
         for record in self:
-            record.invoice_count = len(record.sale_order_id.invoice_ids.filtered(lambda i: i.state != 'cancel'))
-            record.shipment_count = len(record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'cancel'))
+            record.invoice_count = len(record.sale_order_id.invoice_ids.filtered(lambda i: i.state != 'cancel')) if record.sale_order_id else 0
+            record.shipment_count = len(record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'cancel')) if record.sale_order_id else 0
+
 
     @api.model
     def create(self, vals):
         if vals.get('name', _('Nova')) == _('Nova'):
-            vals['name'] = self.env['ir.sequence'].next_by_code('custom.claim') or _('Nova')
+            seq = self.env['ir.sequence'].next_by_code('custom.claim')
+            vals['name'] = seq or _('Nova')
+            if not seq:
+                raise exceptions.ValidationError(_('No s’ha pogut generar la seqüència per a les reclamacions.'))
         return super().create(vals)
+
 
     def action_close(self):
         self.ensure_one()
@@ -109,7 +114,7 @@ class Claim(models.Model):
         self.write({
             'state': 'closed',
             'close_date': datetime.now(),
-            'closure_reason_id': self.closure_reason_id.id or False
+            'closure_reason_id': self.closure_reason_id.id if self.closure_reason_id else None
         })
 
     def action_cancel(self):
@@ -128,36 +133,35 @@ class Claim(models.Model):
     def action_cancel_order(self):
         self.ensure_one()
         if self.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted'):
-            raise exceptions.UserError(
-                _('Operació bloquejada: Existeixen factures validades'))
+            raise exceptions.UserError(_('Operació bloquejada: Existeixen factures validades'))
         
+        if self.sale_order_id.picking_ids.filtered(lambda p: p.state == 'done'):
+            raise exceptions.UserError(_('Operació bloquejada: Existeixen enviaments completats'))
+
         # Notificació al client
         template = self.env.ref('custom_claims.mail_template_order_cancellation', raise_if_not_found=False)
         if template:
             self.sale_order_id.message_post_with_template(template.id)
-        
+
         # Cancel·lar operacions relacionades
         self.sale_order_id._action_cancel()
-        self.sale_order_id.picking_ids.filtered(
-            lambda p: p.state not in ('done', 'cancel')
-        ).action_cancel()
-        
-        self.sale_order_id.invoice_ids.filtered(
-            lambda i: i.state == 'draft'
-        ).button_cancel()
+        self.sale_order_id.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel')).action_cancel()
+        self.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'draft').button_cancel()
+
 
     @api.constrains('sale_order_id', 'state')
     def _check_open_claims(self):
         for record in self:
             if record.state in ['new', 'in_progress']:
-                existing = self.search_count([
+                existing = self.search([
                     ('sale_order_id', '=', record.sale_order_id.id),
                     ('state', 'in', ('new', 'in_progress')),
                     ('id', '!=', record.id)
-                ])
+                ], limit=1)
                 if existing:
                     raise exceptions.ValidationError(
-                        _('Error de duplicitat: Ja existeix una reclamació activa per la comanda %s') % record.sale_order_id.name)
+                        _('Ja existeix una reclamació activa per la comanda %s') % record.sale_order_id.name)
+
 
 class ClaimMessage(models.Model):
     _name = 'custom.claim.message'

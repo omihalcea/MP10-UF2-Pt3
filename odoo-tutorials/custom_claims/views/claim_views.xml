@@ -23,17 +23,13 @@
         <field name="model">custom.claim</field>
         <field name="arch" type="xml">
             <form>
-                <header>
-                    <button name="action_close" string="Tancar" class="oe_highlight" 
-                            invisible="state not in ['new','in_progress']"/>
-                    <button name="action_cancel" string="Cancel·lar" 
-                            invisible="state not in ['new','in_progress']"/>
-                    <button name="action_reopen" string="Reobrir" 
-                            invisible="state not in ['closed','canceled']"/>
-                    <button name="action_cancel_order" string="Cancel·lar Comanda" class="oe_highlight" 
-                            invisible="state not in ['new','in_progress']"/>
-                    <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,canceled"/>
-                </header>
+               <header>
+                <button name="action_close" string="Tancar" class="oe_highlight"/>
+                <button name="action_cancel" string="Cancel·lar"/>
+                <button name="action_reopen" string="Reobrir"/>
+                <button name="action_cancel_order" string="Cancel·lar Comanda" class="oe_highlight"/>
+                <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,canceled"/>
+            </header>
                 <sheet>
                     <group>
                         <group>
@@ -58,9 +54,9 @@
                         <page string="Missatges">
                             <field name="message_ids">
                                 <list>
-                                    <field name="create_date"/>
-                                    <field name="author_id"/>
-                                    <field name="content"/>
+                                    <field name="create_date" readonly="1"/>
+                                    <field name="author_id" readonly="1"/>
+                                    <field name="content" readonly="1"/>
                                 </list>
                             </field>
                         </page>
@@ -76,12 +72,78 @@
         </field>
     </record>
 
+    <!-- Heretar la vista per afegir la condició -->
+    <record id="view_claim_form_inherit" model="ir.ui.view">
+        <field name="name">custom.claim.form.inherit</field>
+        <field name="model">custom.claim</field>
+        <field name="inherit_id" ref="custom_claims.view_claim_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_close']" position="attributes">
+                <attribute name="modifiers">{'invisible': [('state', 'not in', ['new','in_progress'])]}</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_cancel']" position="attributes">
+                <attribute name="modifiers">{'invisible': [('state', 'not in', ['new','in_progress'])]}</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_reopen']" position="attributes">
+                <attribute name="modifiers">{'invisible': [('state', 'not in', ['closed','canceled'])]}</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_cancel_order']" position="attributes">
+                <attribute name="modifiers">{'invisible': [('state', 'not in', ['new','in_progress'])]}</attribute>
+            </xpath>
+        </field>
+    </record>
+
     <!-- Acció i menú -->
     <record id="action_claims" model="ir.actions.act_window">
         <field name="name">Reclamacions</field>
         <field name="res_model">custom.claim</field>
         <field name="view_mode">list,form</field>
     </record>
+
+    <!-- Vista de llista per a custom.closure.reason -->
+    <record id="view_closure_reason_list" model="ir.ui.view">
+        <field name="name">custom.closure.reason.list</field>
+        <field name="model">custom.closure.reason</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name" string="Motiu"/>
+                <field name="code" string="Codi"/>
+                <field name="active" string="Actiu"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista de formulari per a custom.closure.reason -->
+    <record id="view_closure_reason_form" model="ir.ui.view">
+        <field name="name">custom.closure.reason.form</field>
+        <field name="model">custom.closure.reason</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="code"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Definir l'acció per mostrar els motius de tancament -->
+    <record id="action_closure_reasons" model="ir.actions.act_window">
+        <field name="name">Motius de Tancament</field>
+        <field name="res_model">custom.closure.reason</field> <!-- Model personalitzat -->
+        <field name="view_mode">list,form</field> <!-- Tipus de vista (llista i formulari) -->
+        <field name="help">Aquí pots gestionar els motius de tancament</field>
+    </record>
+
+    <!-- Crear el menú per accedir a la vista de motius de tancament -->
+    <menuitem id="menu_closure_reasons"
+            name="Motius de Tancament"
+            parent="menu_configuration" <!-- Menú pare (per exemple: 'Configuració') -->
+            action="action_closure_reasons"/>
+
 
     <!-- Integració amb comandes de venda -->
     <record id="view_sale_order_form_inherit" model="ir.ui.view">

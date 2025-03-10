@@ -5,7 +5,12 @@
     
     <!-- Menú de configuració -->
     <menuitem id="menu_configuration" name="Configuració" parent="menu_claims_root" sequence="100"/>
-    <menuitem id="menu_closure_reasons" name="Motius de Tancament" parent="menu_configuration" action="action_closure_reasons"/>
+    <!-- Crear el menú per accedir a la vista de motius de tancament -->
+    <menuitem id="menu_closure_reasons"
+          name="Motius de Tancament"
+          parent="menu_configuration" <!-- Menú pare (per exemple: 'Configuració') -->
+          action="action_closure_reasons"/>
+
 
     <!-- Acció per motius de tancament -->
     <record id="action_closure_reasons" model="ir.actions.act_window">
