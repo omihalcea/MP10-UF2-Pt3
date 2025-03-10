@@ -57,11 +57,11 @@
                         </page>
                         <page string="Missatges">
                             <field name="message_ids">
-                                <tree>
+                                <list>
                                     <field name="create_date"/>
                                     <field name="author_id"/>
                                     <field name="content"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                         <page string="Relacionats">
@@ -92,13 +92,13 @@
             <xpath expr="//page[@name='other_information']" position="after">
                 <page string="Reclamacions">
                     <field name="claim_ids">
-                        <tree>
+                        <list>
                             <field name="name"/>
                             <field name="subject"/>
                             <field name="state"/>
                             <field name="user_id"/>
                             <field name="create_date"/>
-                        </tree>
+                        </list>
                     </field>
                 </page>
             </xpath>

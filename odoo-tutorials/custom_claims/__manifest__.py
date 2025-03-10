@@ -9,7 +9,6 @@
         'security/security.xml',
         'data/closure_reason_data.xml',
         'views/claim_views.xml',
-        'views/sale_views.xml',
         'views/claim_menus.xml',
     ],
     'installable': True,
