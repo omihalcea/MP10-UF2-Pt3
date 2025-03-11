@@ -8,7 +8,7 @@
     <!-- Crear el menú per accedir a la vista de motius de tancament -->
     <menuitem id="menu_closure_reasons"
           name="Motius de Tancament"
-          parent="menu_configuration" <!-- Menú pare (per exemple: 'Configuració') -->
+          parent="menu_configuration"
           action="action_closure_reasons"/>
 
 

@@ -78,6 +78,11 @@
         <field name="model">custom.claim</field>
         <field name="inherit_id" ref="custom_claims.view_claim_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='claim_id']" position="attributes">
+                <attribute name="invisible">1</attribute>
+                <attribute name="readonly">1</attribute>
+            </xpath>
+
             <xpath expr="//button[@name='action_close']" position="attributes">
                 <attribute name="modifiers">{'invisible': [('state', 'not in', ['new','in_progress'])]}</attribute>
             </xpath>
@@ -141,7 +146,7 @@
     <!-- Crear el menú per accedir a la vista de motius de tancament -->
     <menuitem id="menu_closure_reasons"
             name="Motius de Tancament"
-            parent="menu_configuration" <!-- Menú pare (per exemple: 'Configuració') -->
+            parent="menu_configuration"
             action="action_closure_reasons"/>
 
 
