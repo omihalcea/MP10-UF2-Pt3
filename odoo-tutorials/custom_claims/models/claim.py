@@ -137,7 +137,8 @@ class ClaimMessage(models.Model):
         comodel_name='custom.claim',
         string='Reclamació',
         required=True,
-        ondelete='cascade'
+        ondelete='cascade',
+        readonly=True
     )
     content = fields.Text(
         string='Contingut',
@@ -169,6 +170,8 @@ class ClaimMessage(models.Model):
             message.claim_id.write({'state': 'in_progress'})
         
         return message
+
+        
     def write(self, vals):
         raise exceptions.UserError(_('Els missatges són immutables'))
     

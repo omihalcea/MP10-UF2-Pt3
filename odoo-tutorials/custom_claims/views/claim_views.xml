@@ -57,6 +57,7 @@
                         <page string="Missatges">
                             <field name="message_ids">
                                 <list>
+                                    <field name="claim_id" readonly="1"/>
                                     <field name="create_date" readonly="1"/>
                                     <field name="author_id" readonly="1"/>
                                     <field name="content"/>
