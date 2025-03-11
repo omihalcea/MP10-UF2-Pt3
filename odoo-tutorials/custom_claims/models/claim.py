@@ -95,7 +95,12 @@ class Claim(models.Model):
         for record in self:
             record.invoice_count = len(record.sale_order_id.invoice_ids.filtered(lambda i: i.state != 'cancel')) if record.sale_order_id else 0
             record.shipment_count = len(record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'cancel')) if record.sale_order_id else 0
-
+    
+    @api.depends('message_ids')
+    def _compute_state_based_on_messages(self):
+        for record in self:
+            if record.message_ids and record.state == 'new':
+                record.state = 'in_progress'
 
     @api.model
     def create(self, vals):
@@ -107,48 +112,7 @@ class Claim(models.Model):
         return super().create(vals)
 
 
-    def action_close(self):
-        self.ensure_one()
-        if self.state not in ['new', 'in_progress']:
-            raise exceptions.UserError(_('Acció no permesa en estat actual'))
-        self.write({
-            'state': 'closed',
-            'close_date': datetime.now(),
-            'closure_reason_id': self.closure_reason_id.id if self.closure_reason_id else None
-        })
-
-    def action_cancel(self):
-        self.ensure_one()
-        if self.state == 'canceled':
-            return
-        self.write({'state': 'canceled'})
-
-    def action_reopen(self):
-        self.ensure_one()
-        allowed_states = ['closed', 'canceled']
-        if self.state not in allowed_states:
-            raise exceptions.UserError(_('Només es poden reobrir reclamacions tancades o cancel·lades'))
-        self.write({'state': 'in_progress'})
-
-    def action_cancel_order(self):
-        self.ensure_one()
-        if self.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted'):
-            raise exceptions.UserError(_('Operació bloquejada: Existeixen factures validades'))
-        
-        if self.sale_order_id.picking_ids.filtered(lambda p: p.state == 'done'):
-            raise exceptions.UserError(_('Operació bloquejada: Existeixen enviaments completats'))
-
-        # Notificació al client
-        template = self.env.ref('custom_claims.mail_template_order_cancellation', raise_if_not_found=False)
-        if template:
-            self.sale_order_id.message_post_with_template(template.id)
-
-        # Cancel·lar operacions relacionades
-        self.sale_order_id._action_cancel()
-        self.sale_order_id.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel')).action_cancel()
-        self.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'draft').button_cancel()
-
-
+   
     @api.constrains('sale_order_id', 'state')
     def _check_open_claims(self):
         for record in self:
@@ -185,12 +149,26 @@ class ClaimMessage(models.Model):
         default=lambda self: self.env.user,
         readonly=True
     )
-    create_date = fields.Datetime(
-        string='Data',
-        default=fields.Datetime.now,
-        readonly=True
+   
+    message_type = fields.Selection(
+        selection=[
+            ('comment', 'Comentari'),
+            ('user_notification', 'Notificació d\'usuari')
+        ],
+        string='Tipus de missatge',
+        default='comment'
     )
 
+    @api.model
+    def create(self, vals):
+        # Crea el missatge
+        message = super().create(vals)
+        
+        # Canvia l'estat de la reclamació associada a "En tractament" si està en estat "Nova"
+        if message.claim_id.state == 'new':
+            message.claim_id.write({'state': 'in_progress'})
+        
+        return message
     def write(self, vals):
         raise exceptions.UserError(_('Els missatges són immutables'))
     

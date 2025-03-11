@@ -7,7 +7,7 @@
     'data': [
         'security/ir.model.access.csv',
         'security/security.xml',
-        'data/closure_reason_data.xml',
+        'data/sequences.xml',
         'views/claim_views.xml',
         'views/claim_menus.xml',
     ],

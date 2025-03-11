@@ -46,17 +46,20 @@
                     </group>
                     <notebook>
                         <page string="Detalls">
-                            <field name="subject"/>
-                            <field name="description"/>
-                            <field name="resolution"/>
-                            <field name="closure_reason_id"/>
+                            <group>
+                                <field name="subject" string="Assumpte"/>
+                                <field name="description" string="Descripció"/>
+                                <field name="resolution" string="Resolució final"/>
+                                <field name="closure_reason_id" string="Motiu de Tancament"/>
+                            </group>
                         </page>
+
                         <page string="Missatges">
                             <field name="message_ids">
                                 <list>
                                     <field name="create_date" readonly="1"/>
                                     <field name="author_id" readonly="1"/>
-                                    <field name="content" readonly="1"/>
+                                    <field name="content"/>
                                 </list>
                             </field>
                         </page>
