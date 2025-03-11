@@ -174,7 +174,6 @@ class ClaimMessage(models.Model):
         string='Reclamació',
         required=True,
         ondelete='cascade'
-            default=lambda self: self._context.get('active_id')  # Assigna el claim_id automàticament si s'està creant des de la vista de reclamació
     )
     content = fields.Text(
         string='Contingut',
