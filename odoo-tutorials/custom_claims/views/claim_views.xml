@@ -25,9 +25,9 @@
             <form>
                <header>
                 <button name="action_close" string="Tancar" class="oe_highlight" type="object"/>
-                <button name="action_cancel" string="Cancel·lar"/>
-                <button name="action_reopen" string="Reobrir"/>
-                <button name="action_cancel_order" string="Cancel·lar Comanda" class="oe_highlight"/>
+                <button name="action_cancel" string="Cancel·lar" type="object"/>
+                <button name="action_reopen" string="Reobrir" type="object"/>
+                <button name="action_cancel_order" string="Cancel·lar Comanda" class="oe_highlight" type="object"/>
                 <field name="state" widget="statusbar" statusbar_visible="new,in_progress,closed,canceled"/>
             </header>
                 <sheet>

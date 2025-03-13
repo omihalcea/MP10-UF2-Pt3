@@ -8,6 +8,7 @@
         'security/ir.model.access.csv',
         'security/security.xml',
         'data/sequences.xml',
+        'data/email_templates.xml',
         'views/claim_views.xml',
         'views/claim_menus.xml',
     ],
