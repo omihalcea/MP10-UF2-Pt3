@@ -34,16 +34,23 @@ class ClaimMessage(models.Model):
         default='comment'
     )
 
-    @api.model
-    def create(self, vals):
-        # Crea el missatge
-        message = super().create(vals)
-        
-        # Canvia l'estat de la reclamació associada a "En tractament" si està en estat "Nova"
-        if message.claim_id.state == 'new':
-            message.claim_id.write({'state': 'in_progress'})
-        
-        return message
+    is_system_message = fields.Boolean(
+    string='Missatge del sistema',
+    default=False,
+    help="Indica si el missatge va ser generat automàticament pel sistema"
+    )
+
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        messages = super().create(vals_list)
+        for message in messages:
+            # Solo si es un mensaje manual (no notificación del sistema)
+            if message.message_type == 'comment': 
+                claim = message.claim_id
+                if claim.state == 'new':
+                    claim.write({'state': 'in_progress'})
+        return messages
 
         
     def write(self, vals):

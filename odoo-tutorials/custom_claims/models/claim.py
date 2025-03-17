@@ -120,21 +120,23 @@ class Claim(models.Model):
             record.shipment_count = len(record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'cancel')) if record.sale_order_id else 0
     
     # Mètode per canviar l'estat a "En tractament" si hi ha missatges
-    @api.depends('message_ids')
+    @api.depends('message_ids')  # <-- Asegúrate de que está decorado
     def _compute_state_based_on_messages(self):
         for record in self:
             if record.message_ids and record.state == 'new':
-                record.state = 'in_progress'
+                record.state = 'in_progress'  # Actualiza solo si está en "new"
+
 
     # Mètode per generar una seqüència única per a la referència de la reclamació
-    @api.model
-    def create(self, vals):
-        if vals.get('name', _('Nova')) == _('Nova'):
-            seq = self.env['ir.sequence'].next_by_code('custom.claim')  # Obtenir la següent seqüència
-            vals['name'] = seq or _('Nova')
-            if not seq:
-                raise exceptions.ValidationError(_('No s’ha pogut generar la seqüència per a les reclamacions.'))
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('name', _('Nova')) == _('Nova'):
+                seq = self.env['ir.sequence'].next_by_code('custom.claim')
+                vals['name'] = seq or _('Nova')
+                if not seq:
+                    raise exceptions.ValidationError(_('Error en la secuencia'))
+        return super().create(vals_list)
 
     # Restricció per evitar dues reclamacions obertes per la mateixa comanda
     @api.constrains('sale_order_id', 'state')
@@ -152,72 +154,71 @@ class Claim(models.Model):
                     
     # Mètode per tancar una reclamació
     def action_close(self):
-        """ Tanca la reclamació i actualitza la data de tancament."""
-        for record in self:
-            if record.state not in ['closed', 'canceled']:
-                record.write({
-                    'state': 'closed',
-                    'close_date': fields.Datetime.now(),  # Actualitzar data de tancament
-                })
-        return True
-
-    # Mètode per cancel·lar una reclamació
-    def action_cancel(self):
-        """
-        Cancel·la la reclamació i gestiona la cancel·lació de la comanda associada.
-        """
         for record in self:
             if record.state in ['closed', 'canceled']:
-                raise UserError(_('No es pot cancel·lar una reclamació ja tancada o cancel·lada.'))
-
-            # Verificar si hi ha factures publicades
+                raise UserError(_('La reclamació ja està tancada o cancel·lada.'))
+            
+            record.write({
+                'state': 'closed',
+                'close_date': fields.Datetime.now(),
+            })
+            # Mensaje en el chatter
+            record.message_post(
+                body="✅ La reclamació ha estat tancada.",
+                message_type='comment',
+                subtype_xmlid='mail.mt_note'
+            )
+        return True
+        
+    # Mètode per cancel·lar una reclamació
+    def action_cancel(self):
+        for record in self:
+            if record.state == 'canceled':
+                raise UserError(_('La reclamació ja està cancel·lada.'))
+            
             if record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state == 'posted'):
-                raise UserError(_('No es pot cancel·lar la comanda perquè té factures publicades.'))
-
-            # Enviar correu al client informant de la cancel·lació
-            template = self.env.ref('custom_claims.email_template_claim_cancellation')
-            if template:
-                template.send_mail(record.id, force_send=True)
-
-            # Cancel·lar la comanda, les factures no publicades i els enviaments no fets
+                raise UserError(_('No es pot cancel·lar perquè hi ha factures publicades.'))
+            
             if record.sale_order_id:
-                record.sale_order_id.action_cancel()  # Cancel·lar la comanda
-                # Cancel·lar factures no publicades
+                record.sale_order_id.action_cancel()
                 invoices_to_cancel = record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state != 'posted')
                 invoices_to_cancel.button_cancel()
-                # Cancel·lar enviaments no fets
                 pickings_to_cancel = record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'done')
                 pickings_to_cancel.action_cancel()
-
-            # Actualitzar l'estat de la reclamació
+            
             record.write({
                 'state': 'canceled',
-                'close_date': fields.Datetime.now(),  # Actualitzar data de tancament
+                'close_date': fields.Datetime.now(),
             })
+            # Mensaje en el chatter
+            record.message_post(
+                body="❌ La reclamació ha estat cancel·lada.",
+                message_type='comment',
+                subtype_xmlid='mail.mt_note'
+            )
         return True
     
     # Mètode per reobrir una reclamació
     def action_reopen(self):
-        """
-        Reobrir una reclamació tancada o cancel·lada.
-        """
         for record in self:
             if record.state not in ['closed', 'canceled']:
                 raise UserError(_('Només es poden reobrir reclamacions tancades o cancel·lades.'))
-
-            # Si hi ha missatges, canviar a 'in_progress'; altrament, a 'new'
+            
             new_state = 'in_progress' if record.message_ids else 'new'
             record.write({
                 'state': new_state,
-                'close_date': False,  # Esborrar la data de tancament
+                'close_date': False,
             })
+            # Mensaje en el chatter
+            record.message_post(
+                body="🔄 La reclamació ha estat reoberta.",
+                message_type='comment',
+                subtype_xmlid='mail.mt_note'
+            )
         return True
 
     # Mètode per cancel·lar la comanda de venda associada
     def action_cancel_order(self):
-        """
-        Cancel·lar la comanda de venda associada a la reclamació.
-        """
         for record in self:
             if not record.sale_order_id:
                 raise UserError(_('No hi ha cap comanda de venda associada a aquesta reclamació.'))
@@ -231,12 +232,17 @@ class Claim(models.Model):
             if template:
                 template.send_mail(record.sale_order_id.id, force_send=True)
 
+            # Notificar al chatter de la comanda sobre la cancel·lació i l'enviament del correu
+            record.sale_order_id.message_post(
+                body=f"El client ha estat notificat per correu de la cancel·lació de la comanda {record.sale_order_id.name}.",
+                message_type='comment',
+                subtype_xmlid='mail.mt_note'
+            )
+
             # Cancel·lar la comanda, les factures no publicades i els enviaments no fets
             record.sale_order_id.action_cancel()  # Cancel·lar la comanda
-            # Cancel·lar factures no publicades
             invoices_to_cancel = record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state != 'posted')
             invoices_to_cancel.button_cancel()
-            # Cancel·lar enviaments no fets
             pickings_to_cancel = record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'done')
             pickings_to_cancel.action_cancel()
 
@@ -244,6 +250,6 @@ class Claim(models.Model):
             if record.state in ['new', 'in_progress']:
                 record.write({
                     'state': 'canceled',
-                    'close_date': fields.Datetime.now(),  # Actualitzar data de tancament
+                    'close_date': fields.Datetime.now(),
                 })
         return True

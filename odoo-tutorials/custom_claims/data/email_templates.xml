@@ -1,35 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <record id="email_template_claim_cancellation" model="mail.template">
-        <field name="name">Cancel·lació de Reclamació</field>
-        <field name="model_id" ref="custom_claims.model_custom_claim"/>
-        <field name="email_from">${object.user_id.email}</field>
-        <field name="email_to">${object.partner_id.email}</field>
-        <field name="subject">Cancel·lació de la reclamació ${object.name}</field>
-        <field name="body_html">
-            <![CDATA[
-                <p>Benvolgut/da ${object.partner_id.name},</p>
-                <p>La reclamació amb referència <strong>${object.name}</strong> ha estat cancel·lada.</p>
-                <p>Si tens alguna pregunta, no dubtis a contactar-nos.</p>
-                <p>Atentament,</p>
-                <p>${object.user_id.name}</p>
-            ]]>
-        </field>
-    </record>
+  <data>
     <record id="email_template_order_cancellation" model="mail.template">
-    <field name="name">Cancel·lació de Comanda</field>
-    <field name="model_id" ref="sale.model_sale_order"/>
-    <field name="email_from">${object.user_id.email}</field>
-    <field name="email_to">${object.partner_id.email}</field>
-    <field name="subject">Cancel·lació de la comanda ${object.name}</field>
-    <field name="body_html">
+      <field name="name">Cancel·lació de Comanda</field>
+      <field name="model_id" ref="sale.model_sale_order"/>
+      <field name="email_from">{{ object.user_id.email or '' }}</field>
+      <field name="email_to">{{ object.partner_id.email or '' }}</field>
+      <field name="subject">Cancel·lació de la comanda {{ object.name }}</field>
+      <field name="body_html">
         <![CDATA[
-            <p>Benvolgut/da ${object.partner_id.name},</p>
-            <p>La comanda amb referència <strong>${object.name}</strong> ha estat cancel·lada.</p>
-            <p>Si tens alguna pregunta, no dubtis a contactar-nos.</p>
-            <p>Atentament,</p>
-            <p>${object.user_id.name}</p>
+          <p>Benvolgut/da {{ object.partner_id.name }},</p>
+          <p>La comanda amb referència <strong>{{ object.name }}</strong> ha estat cancel·lada.</p>
+          <p>Si tens alguna pregunta, no dubtis a contactar-nos.</p>
+          <p>Atentament,</p>
+          <p>{{ object.user_id.name }}</p>
         ]]>
-    </field>
-</record>
+      </field>
+    </record>
+  </data>
 </odoo>

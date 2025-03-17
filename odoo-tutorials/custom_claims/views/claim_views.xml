@@ -57,10 +57,10 @@
                         <page string="Missatges">
                             <field name="message_ids">
                                 <list>
-                                    <field name="claim_id" readonly="1"/>
-                                    <field name="create_date" readonly="1"/>
-                                    <field name="author_id" readonly="1"/>
+                                    <field name="create_date"/>
+                                    <field name="author_id"/>
                                     <field name="content"/>
+                                    <field name="is_system_message" invisible="1"/>
                                 </list>
                             </field>
                         </page>
@@ -72,6 +72,7 @@
                         </page>
                     </notebook>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>
