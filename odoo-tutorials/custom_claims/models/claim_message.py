@@ -40,6 +40,11 @@ class ClaimMessage(models.Model):
     help="Indica si el missatge va ser generat automàticament pel sistema"
     )
 
+    # Data de creació de la reclamació
+    create_date = fields.Datetime(
+        string='Data creació',
+        readonly=True  # Només de lectura
+    )
 
     @api.model_create_multi
     def create(self, vals_list):

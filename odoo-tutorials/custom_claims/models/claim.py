@@ -227,8 +227,22 @@ class Claim(models.Model):
             if record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state == 'posted'):
                 raise UserError(_('No es pot cancel·lar la comanda perquè té factures publicades.'))
 
-            # Enviar correu al client informant de la cancel·lació
-            template = self.env.ref('custom_claims.email_template_order_cancellation')
+            # Cancel·lar la comanda de venda si no està ja cancel·lada o finalitzada
+            if record.sale_order_id.state not in ['cancel', 'done']:
+                record.sale_order_id._action_cancel()  # Utilitzem el mètode intern per cancel·lar la comanda
+
+            # Cancel·lar les factures no publicades
+            invoices_to_cancel = record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state != 'posted')
+            if invoices_to_cancel:
+                invoices_to_cancel.button_cancel()
+
+            # Cancel·lar els enviaments no fets
+            pickings_to_cancel = record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'done')
+            if pickings_to_cancel:
+                pickings_to_cancel.action_cancel()
+
+            # Enviar correu al client utilitzant la plantilla per defecte d'Odoo
+            template = self.env.ref('sale.mail_template_sale_cancellation', raise_if_not_found=False)
             if template:
                 template.send_mail(record.sale_order_id.id, force_send=True)
 
@@ -239,17 +253,11 @@ class Claim(models.Model):
                 subtype_xmlid='mail.mt_note'
             )
 
-            # Cancel·lar la comanda, les factures no publicades i els enviaments no fets
-            record.sale_order_id.action_cancel()  # Cancel·lar la comanda
-            invoices_to_cancel = record.sale_order_id.invoice_ids.filtered(lambda inv: inv.state != 'posted')
-            invoices_to_cancel.button_cancel()
-            pickings_to_cancel = record.sale_order_id.picking_ids.filtered(lambda p: p.state != 'done')
-            pickings_to_cancel.action_cancel()
-
             # Actualitzar l'estat de la reclamació si és necessari
             if record.state in ['new', 'in_progress']:
                 record.write({
                     'state': 'canceled',
                     'close_date': fields.Datetime.now(),
                 })
+
         return True
